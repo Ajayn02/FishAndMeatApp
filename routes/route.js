@@ -23,7 +23,7 @@ router.put("/updatefcm",jwtMiddle,userController.updateFCM_token)
 
 // router.post("/addorderhistory",jwtMiddle,orderController.addOrderhistory)
 router.get('/getorderhistory',jwtMiddle,orderController.getUserOrderHistory)
-
+router.get('/getorderstatus/orderId',jwtMiddle,orderController.getOrderStatus)
 
 // product
 router.post("/addproduct",jwtMiddle,multerMiddle.single(`image`),productController.addProduct)
@@ -63,5 +63,6 @@ router.get("/getvendorapplication",jwtMiddle,adminController.getVendorApplicatio
 router.put('/verifyvendor/:id',jwtMiddle,adminController.verifyVendorApplication)
 router.get("/notificationrequest",jwtMiddle,adminController.getOfferNotificationRequest)
 router.put("/verifynotification/:id",jwtMiddle,adminController.verifyVendorNotificationRequest)
+router.get('/salesreport',jwtMiddle,adminController.getSalesReport)
 
 module.exports=router

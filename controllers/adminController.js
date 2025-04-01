@@ -122,3 +122,17 @@ const sendScheduledNotifications = async () => {
 //     console.log("checking for new notifications");
 //     await sendScheduledNotifications();
 // })
+
+exports.getSalesReport = async (req, res) => {
+    try {
+        const orders = await prisma.orders.findMany({
+            select: { discountAmount: true }
+        })
+        const totalRevenue = orders.reduce((prev, next) => prev + next.discountAmount, 0)
+        const totalOrders = orders.length
+        res.status(200).json({ totalRevenue, totalOrders })
+    } catch (err) {
+        console.log(err);
+        res.status(400).json(err)
+    }
+}

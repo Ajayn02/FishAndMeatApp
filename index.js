@@ -7,9 +7,7 @@ const router=require('./routes/route')
 const server=express()
 
 server.use(cors())
-// Increase request body size limit
-server.use(express.json({ limit: '50mb' }));  
-server.use(express.urlencoded({ limit: '50mb', extended: true }));
+server.use(express.json())
 server.use(router)
 server.use('/uploads', express.static('./uploads'))
 

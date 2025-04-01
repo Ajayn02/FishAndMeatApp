@@ -64,8 +64,8 @@ model cart {
   description   String
   price         Float
   image         String
-  rating        String
-  availability  String
+  reviews        Json
+  availability  Json
   category      String
 }
 

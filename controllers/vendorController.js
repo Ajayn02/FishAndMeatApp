@@ -9,10 +9,18 @@ exports.addVendorApplication = async (req, res) => {
         const user = await prisma.users.findUnique({
             where: { id: userId }
         })
-        const newVendor = await prisma.vendor.create({
-            data: { userId, pan, adhar, shopname, gstNumber, location, email: user.email, mobile: user.mobile, image }
+        const existing = await prisma.vendor.findUnique({
+            where: { userId, email: user.email }
         })
-        res.status(200).json({ message: `Application send successfully`, data: newVendor })
+        if (existing) {
+            return res.status(400).json(`vendor already exist`)
+        } else {
+            const newVendor = await prisma.vendor.create({
+                data: { userId, pan, adhar, shopname, gstNumber, location, email: user.email, mobile: user.mobile, image }
+            })
+            res.status(200).json({ message: `Application send successfully`, data: newVendor })
+
+        }
     } catch (err) {
         console.log(err);
         res.status(400).json(err)
@@ -27,6 +35,8 @@ exports.getVendorApplicationStatus = async (req, res) => {
         const application = await prisma.vendor.findUnique({
             where: { userId }
         })
+        // console.log(application);
+
         if (!application) { return res.status(404).json(`Application not found`) }
         res.status(200).json(application.status)
     }
@@ -42,7 +52,7 @@ exports.sendSpecialOfferNotification = async (req, res) => {
         const vendor = await prisma.vendor.findUnique({
             where: { userId }
         })
-        if(!vendor){return res.status(200).json(`vendor not found`)}
+        if (!vendor) { return res.status(200).json(`vendor not found`) }
         const { title, body, dateTime, productId } = req.body
         const newNotification = await prisma.offerNotifications.create({
             data: { title, body, dateTime, productId, vendorId: vendor.id }

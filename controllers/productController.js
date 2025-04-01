@@ -31,6 +31,7 @@ exports.getAllProducts = async (req, res) => {
     try {
         // const searchkey = req.query.searchkey
         const { searchkey, category, price } = req.query;
+        
         //availability
         let condition = {}
         if (searchkey && searchkey !== "") {
@@ -47,7 +48,7 @@ exports.getAllProducts = async (req, res) => {
         const products = await prisma.products.findMany({
             where: condition
         })
-
+        
         res.status(200).json(products)
     }
     catch (err) {
@@ -178,7 +179,7 @@ exports.addReviewForProduct = async (req, res) => {
         const newReview = { review, rating, userId };
         // Check if the product already has reviews
         let updatedReviews = Array.isArray(product.reviews) ? product.reviews : [];
-                
+
         updatedReviews.push(newReview);
         await prisma.products.update({
             where: { id: productId },

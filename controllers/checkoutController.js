@@ -72,10 +72,29 @@ exports.conformPayment = async (req, res) => {
         const user = await prisma.users.findUnique({
             where: { id: updatedOrder.userId }
         })
-
+        const userId = req.payload
         if (status === "PAID") {
             const pdfPath = await generateInvoicePDF(updatedOrder, user);
             await sendInvoiceEmail(user, updatedOrder, pdfPath);
+            // await prisma.cart.deleteMany({ where: { userId: updatedOrder.userId } });
+            const checkoutProducts = await prisma.cart.findMany({ where: { userId } });
+
+            for (let i = 0; i < checkoutProducts.length; i++) {
+                const product = await prisma.products.findUnique({
+                    where: { id: checkoutProducts[i].productId }
+                })
+                if (product) {
+                    const newStock = product.stock - checkoutProducts[i].quantity
+
+                    await prisma.products.update({
+                        where: { id: checkoutProducts[i].productId },
+                        data: { stock: newStock }
+                    })
+                } else {
+                    console.log(`no products `);
+                }
+            }
+
             await prisma.cart.deleteMany({ where: { userId: updatedOrder.userId } });
         }
         res.status(200).json({ message: `payment conformed`, order: updatedOrder });

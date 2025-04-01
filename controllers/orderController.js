@@ -14,6 +14,20 @@ exports.getUserOrderHistory = async (req, res) => {
     }
 }
 
+exports.getOrderStatus = async (req, res) => {
+    try {
+        const { orderId } = req.params
+        const order = await prisma.orders.findUnique({
+            where: { id: orderId }
+        })
+        res.status(200).json(order.status)
+    }
+    catch (err) {
+        console.log(err);
+        res.status(404).json(err)
+    }
+}
+
 
 
 // exports.addOrderhistory = async (req, res) => {
