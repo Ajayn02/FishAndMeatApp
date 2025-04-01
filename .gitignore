@@ -1,0 +1,4 @@
+node_modules
+# Keep environment variables out of version control
+.env
+fishandmeat-ea2c8-firebase-adminsdk-fbsvc-1c4828d160.json
