@@ -71,8 +71,8 @@ router.get('/allvendors',jwtMiddle,adminController.getVendorList)
 router.post("/getoneuser",jwtMiddle,adminController.getOneUser)
 router.post('/deactivateaccount',jwtMiddle,adminController.deactivateUser)
 router.post('/activateaccount',jwtMiddle,adminController.activateAccount)
-
-router.get("/topselling",jwtMiddle,adminController.topSellingProduct)
+router.get("/topselling/:period",jwtMiddle,adminController.topSellingProduct)
+router.get("/topvendor/:period",jwtMiddle,adminController.topRevenueGeneratingVendor)
 
 
 

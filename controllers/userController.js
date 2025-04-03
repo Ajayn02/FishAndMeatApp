@@ -83,7 +83,7 @@ exports.registerUser = async (req, res) => {
                 data: { username, mobile, email, otp, otpExpiry, fcmToken }
             })
 
-            res.status(200).json(`OTP send successfully`)
+            res.status(201).json(`OTP send successfully`)
 
         }
     } catch (err) {
@@ -200,7 +200,7 @@ exports.updateUserProfile = async (req, res) => {
             where: { id: userId },
             data: { address, pincode }
         })
-        res.status(200).json({ message: "user profile updated", data: user })
+        res.status(201).json({ message: "user profile updated", data: user })
     }
     catch (err) {
         console.log(err);

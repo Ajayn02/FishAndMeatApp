@@ -265,7 +265,8 @@ exports.activateAccount = async (req, res) => {
 
 exports.topSellingProduct = async (req, res) => {
     try {
-        const { period } = req.query;
+        const { period } = req.params;
+
         const startDate = new Date();
         if (period === "week") {
             startDate.setDate(startDate.getDate() - 7); // Last 7 days
@@ -275,12 +276,21 @@ exports.topSellingProduct = async (req, res) => {
             return res.status(400).json({ message: "Invalid period. Use week or month" });
         }
 
-        const allOrders = await prisma.orders.findMany()
+        // const allOrders = await prisma.orders.findMany()
+        const allOrders = await prisma.orders.findMany({
+            where: {
+                date: {
+                    gte: startDate
+                },
+            }
+        })
+        //extract items from orders
         var products = []
         const addProduct = allOrders.map((i) => {
             products.push(i.items)
         })
 
+        //extract product id and quanity
         const productDetails = []
         // products.map((val) => {
         //     productDetails.push({productId:val[0].productId,quantity:val[0].quantity})
@@ -290,16 +300,20 @@ exports.topSellingProduct = async (req, res) => {
                 productDetails.push({ productId: products[i][j].productId, quantity: products[i][j].quantity })
             }
         }
-        // console.log(productDetails);
+        // grouping same products
         const salesSummary = productDetails.reduce((acc, { productId, quantity }) => {
             acc[productId] = (acc[productId] || 0) + quantity;
             return acc;
         }, {});
+        //filter top sold product
         const topProduct = Object.entries(salesSummary).reduce((top, [productId, quantity]) => {
             return quantity > top.quantity ? { productId, quantity } : top;
         }, { productId: null, quantity: 0 });
-        // console.log(topProduct);
-        res.status(200).json(topProduct)
+        // to find the product
+        const topProductDetails = await prisma.products.findUnique({
+            where: { id: topProduct.productId }
+        })
+        res.status(200).json({ quantity: topProduct.quantity, productDetails: topProductDetails })
     }
     catch (err) {
         console.log(err);
@@ -307,3 +321,79 @@ exports.topSellingProduct = async (req, res) => {
     }
 }
 
+exports.topRevenueGeneratingVendor = async (req, res) => {
+    try {
+        const { period } = req.params;
+
+        const startDate = new Date();
+        if (period === "week") {
+            startDate.setDate(startDate.getDate() - 7); // Last 7 days
+        } else if (period === "month") {
+            startDate.setMonth(startDate.getMonth() - 1); // Last 30 days
+        } else {
+            return res.status(400).json({ message: "Invalid period. Use week or month" });
+        }
+
+        // const allOrders = await prisma.orders.findMany()
+        const allOrders = await prisma.orders.findMany({
+            where: {
+                date: {
+                    gte: startDate
+                },
+            }
+        })
+        //ordered product details
+        var orderedProducts = [];
+        allOrders.map((i) => {
+            orderedProducts.push(i.items)
+        })
+
+        //filter to productId and quantity
+        var orderDetails = []
+        for (let i = 0; i < orderedProducts.length; i++) {
+            for (let j = 0; j < orderedProducts[i].length; j++) {
+                orderDetails.push({ productId: orderedProducts[i][j].productId, quantity: orderedProducts[i][j].quantity })
+            }
+        }
+        //group same products
+        var groupedProducts = {};
+        orderDetails.forEach(({ productId, quantity }) => {
+            if (!groupedProducts[productId]) {
+                groupedProducts[productId] = 0;
+            }
+            groupedProducts[productId] += quantity;
+        });
+        const finalGroupedProducts = Object.entries(groupedProducts).map(([productId, quantity]) => ({
+            productId,
+            quantity
+        }));
+
+        //for finding products details and revenue
+        var userRevenueDetails = []
+        await Promise.all(finalGroupedProducts.map(async (i) => {
+            var product = await prisma.products.findUnique({
+                where: {
+                    id: i.productId
+                }
+            })
+            userRevenueDetails.push({ vendorId: product.userId, productId: i.productId, quantity: i.quantity, price: product.price, totalPrice: product.price * i.quantity })
+        }))
+
+        //filtering most revenue generated vendor
+        const topVendorDetails = userRevenueDetails.reduce((max, product) => (product.totalPrice > max.totalPrice ? product : max), userRevenueDetails[0]);
+
+        //finding top vendor details
+        const topRevenueGeneratingVendor = await prisma.vendor.findUnique({
+            where: {
+                userId: topVendorDetails.vendorId
+            }
+        })
+        res.status(200).json({ vendor: topRevenueGeneratingVendor, profit: topVendorDetails.totalPrice, quantity: topVendorDetails.quantity })
+
+    }
+    catch (err) {
+        console.log(err);
+        res.status(400).json(err)
+    }
+
+}

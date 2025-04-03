@@ -19,7 +19,8 @@ exports.addProduct = async (req, res) => {
             data: { title, description, price: parsedPrice, offerPrice: parsedOfferPrice, availability: parsedAvailability, stock: Number(stock), category, userId, image }
         })
         res.status(201).json({ message: "Product added", data: newProduct })
-
+        console.log(`product added`);
+        
     }
     catch (err) {
         console.log(err);
