@@ -23,6 +23,8 @@ model users {
   otp       String? 
   otpExpiry DateTime?
   fcmToken  String? 
+  vendor    Boolean  @default(false)
+  isActive  Boolean  @default(true)
 }
 
 
@@ -64,7 +66,8 @@ model cart {
   description   String
   price         Float
   image         String
-  reviews        Json
+  offerPrice    Float?
+  reviews       Json
   availability  Json
   category      String
 }
@@ -72,6 +75,7 @@ model cart {
 model promocodes {
   id                 String   @id @default(auto()) @map("_id") @db.ObjectId
   code               String   @unique 
+  vendorId             String
   discountPercentage Int 
   expiry             DateTime 
   createdAt          DateTime @default(now()) 
@@ -82,14 +86,17 @@ model Vendor {
   userId    String  @unique
   email     String  @unique
   mobile    String
+  name      String
   pan       String
   gstNumber String
-  adhar    String
+  adhar     String
   image     String
   shopname  String
   location  String
   status    String  @default("pending")
   createdAt DateTime @default(now())
+  isActive  Boolean  @default(true)
+
 }
 
 model offerNotifications  {

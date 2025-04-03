@@ -26,7 +26,7 @@ router.get('/getorderhistory',jwtMiddle,orderController.getUserOrderHistory)
 router.get('/getorderstatus/orderId',jwtMiddle,orderController.getOrderStatus)
 
 // product
-router.post("/addproduct",jwtMiddle,multerMiddle.single(`image`),productController.addProduct)
+router.post("/addproduct",jwtMiddle,multerMiddle.single('image'),productController.addProduct)
 router.get("/allproducts",jwtMiddle,productController.getAllProducts)
 router.get("/userproducts",jwtMiddle,productController.getUserPosts)
 router.get("/getoneproduct/:id",jwtMiddle,productController.getUniqueProduct)
@@ -47,6 +47,8 @@ router.get("/decrecart/:id",jwtMiddle,cartController.decreaseQuantity)
 // promocode
 router.post("/createpromo",jwtMiddle,promocodeController.createPromocode)
 router.post("/applypromo",jwtMiddle,promocodeController.applyPromocode)
+router.get("/getvendorpromo",jwtMiddle,promocodeController.getVendorPromocode)
+router.put("/updatepromo/:id",jwtMiddle,promocodeController.editVendorPromocode)
 
 //checkout
 router.post("/checkout",jwtMiddle,checkoutController.checkoutCart)
@@ -64,5 +66,14 @@ router.put('/verifyvendor/:id',jwtMiddle,adminController.verifyVendorApplication
 router.get("/notificationrequest",jwtMiddle,adminController.getOfferNotificationRequest)
 router.put("/verifynotification/:id",jwtMiddle,adminController.verifyVendorNotificationRequest)
 router.get('/salesreport',jwtMiddle,adminController.getSalesReport)
+router.get('/allusers',jwtMiddle,adminController.getUsersList)
+router.get('/allvendors',jwtMiddle,adminController.getVendorList)
+router.post("/getoneuser",jwtMiddle,adminController.getOneUser)
+router.post('/deactivateaccount',jwtMiddle,adminController.deactivateUser)
+router.post('/activateaccount',jwtMiddle,adminController.activateAccount)
+
+router.get("/topselling",jwtMiddle,adminController.topSellingProduct)
+
+
 
 module.exports=router

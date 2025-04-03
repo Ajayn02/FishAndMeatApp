@@ -1,4 +1,4 @@
-const prisma=require('../connection/db')
+const prisma = require('../connection/db')
 
 const generatePromocode = () => {
     const length = 8
@@ -20,14 +20,20 @@ const convertToISO = (dateStr) => {
 exports.createPromocode = async (req, res) => {
     try {
         const { discount, expiry } = req.body
+        const userId = req.payload
 
-        if (!discount || !expiry) { res.status(404).json({ error: "Discount percentage and expiry date are required" }) }
+        if (!discount || !expiry) { return res.status(404).json({ error: "Discount percentage and expiry date are required" }) }
+
+        const vendor = await prisma.vendor.findUnique({
+            where: { userId }
+        })
+        if (!vendor) { return res.status(404).json(`vendor not found`) }
 
         const expiryDate = convertToISO(expiry)
 
         const code = generatePromocode();
         const promocode = await prisma.promocodes.create({
-            data: { discountPercentage: discount, expiry: expiryDate, code }
+            data: { discountPercentage: discount, expiry: expiryDate, code, vendorId: vendor.id }
         })
         res.status(200).json({
             message: `promocode created successfully`,
@@ -49,15 +55,54 @@ exports.applyPromocode = async (req, res) => {
         })
 
         if (!promocode) {
-            res.status(404).json(`Invalid promo code`)
+            return res.status(404).json(`Invalid promo code`)
         } else if (new Date() > promocode?.expiry) {
-            res.status(404).json(`Expired promo code`)
+            return res.status(404).json(`Expired promo code`)
         } else {
-            res.status(200).json({ message: "Valid promo code ", discount: promocode.discountPercentage })
+            return res.status(200).json({ message: "Valid promo code ", discount: promocode.discountPercentage })
         }
     }
     catch (err) {
         console.log(err);
         res.status(404).json(err)
     }
+}
+
+exports.getVendorPromocode = async (req, res) => {
+    try {
+        const userId = req.payload
+        const vendor = await prisma.vendor.findUnique({
+            where: { userId }
+        })
+        if (!vendor) { return res.status(400).json(`Vendor not found`) }
+        const promocodes = await prisma.promocodes.findMany({
+            where: {
+                vendorId: vendor.id
+            }
+        })
+        res.status(200).json(promocodes)
+    }
+    catch (err) {
+        console.log(err);
+        res.status(404).json(err)
+    }
+
+}
+
+exports.editVendorPromocode = async (req, res) => {
+    try {
+        const { id } = req.params
+        const { discount, expiry } = req.body
+        const expiryDate = convertToISO(expiry)
+        const promocode = await prisma.promocodes.update({
+            where: { id },
+            data: { discountPercentage: discount, expiry:expiryDate }
+        })
+        res.status(200).json(promocode)
+    }
+    catch (err) {
+        console.log(err);
+        res.status(404).json(err)
+    }
+
 }

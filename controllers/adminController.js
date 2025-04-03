@@ -136,3 +136,174 @@ exports.getSalesReport = async (req, res) => {
         res.status(400).json(err)
     }
 }
+
+exports.getUsersList = async (req, res) => {
+    try {
+        const { search } = req.query;
+        const users = await prisma.users.findMany({
+            where: {
+                vendor: false,
+                ...(search && {
+                    OR: [
+                        { username: { contains: search, mode: "insensitive" } },
+                        { email: { contains: search, mode: "insensitive" } }
+                    ]
+                })
+            }
+        })
+
+        res.status(200).json(users)
+    }
+    catch (err) {
+        console.log(err);
+        res.status(400).json(err)
+    }
+}
+
+exports.getVendorList = async (req, res) => {
+    try {
+        const { search } = req.query;
+        const vendors = await prisma.vendor.findMany({
+            where: {
+                status: "success",
+                ...(search && {
+                    OR: [
+                        { name: { contains: search, mode: "insensitive" } },
+                        { email: { contains: search, mode: "insensitive" } }
+                    ]
+                })
+            }
+        })
+        res.status(200).json(vendors)
+    }
+    catch (err) {
+        console.log(err);
+        res.status(400).json(err)
+    }
+
+}
+
+exports.getOneUser = async (req, res) => {
+    try {
+        const { role, id } = req.body
+
+        if (role == 'user') {
+            const user = await prisma.users.findUnique({
+                where: { id }
+            })
+            return res.status(200).json(user)
+        } else if (role == 'vendor') {
+            const vendor = await prisma.vendor.findUnique({
+                where: { id }
+            })
+            return res.status(200).json(vendor)
+        } else {
+            return res.status(400).json('not found')
+        }
+    }
+    catch (err) {
+        console.log(err);
+        res.status(400).json(err)
+    }
+}
+
+
+exports.deactivateUser = async (req, res) => {
+    try {
+        const { id, role } = req.body
+        if (role == 'user') {
+            const user = await prisma.users.update({
+                where: { id },
+                data: { isActive: false }
+            })
+            return res.status(200).json(user)
+        } else if (role == 'vendor') {
+            const vendor = await prisma.vendor.update({
+                where: { id },
+                data: { isActive: false }
+            })
+            return res.status(200).json(vendor)
+        }
+        else {
+            return res.status(400).json('not found')
+        }
+
+    }
+    catch (err) {
+        console.log(err);
+        res.status(400).json(err)
+    }
+}
+
+exports.activateAccount = async (req, res) => {
+    try {
+        const { id, role } = req.body
+        if (role == 'user') {
+            const user = await prisma.users.update({
+                where: { id },
+                data: { isActive: true }
+            })
+            return res.status(200).json(user)
+        } else if (role == 'vendor') {
+            const vendor = await prisma.vendor.update({
+                where: { id },
+                data: { isActive: true }
+            })
+            return res.status(200).json(vendor)
+        }
+        else {
+            return res.status(400).json('not found')
+        }
+
+    }
+    catch (err) {
+        console.log(err);
+        res.status(400).json(err)
+    }
+}
+
+
+exports.topSellingProduct = async (req, res) => {
+    try {
+        const { period } = req.query;
+        const startDate = new Date();
+        if (period === "week") {
+            startDate.setDate(startDate.getDate() - 7); // Last 7 days
+        } else if (period === "month") {
+            startDate.setMonth(startDate.getMonth() - 1); // Last 30 days
+        } else {
+            return res.status(400).json({ message: "Invalid period. Use week or month" });
+        }
+
+        const allOrders = await prisma.orders.findMany()
+        var products = []
+        const addProduct = allOrders.map((i) => {
+            products.push(i.items)
+        })
+
+        const productDetails = []
+        // products.map((val) => {
+        //     productDetails.push({productId:val[0].productId,quantity:val[0].quantity})
+        // }
+        for (let i = 0; i < products.length; i++) {
+            for (let j = 0; j < products[i].length; j++) {
+                productDetails.push({ productId: products[i][j].productId, quantity: products[i][j].quantity })
+            }
+        }
+        // console.log(productDetails);
+        const salesSummary = productDetails.reduce((acc, { productId, quantity }) => {
+            acc[productId] = (acc[productId] || 0) + quantity;
+            return acc;
+        }, {});
+        const topProduct = Object.entries(salesSummary).reduce((top, [productId, quantity]) => {
+            return quantity > top.quantity ? { productId, quantity } : top;
+        }, { productId: null, quantity: 0 });
+        // console.log(topProduct);
+        res.status(200).json(topProduct)
+    }
+    catch (err) {
+        console.log(err);
+        res.status(400).json(err)
+    }
+}
+

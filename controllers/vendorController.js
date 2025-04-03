@@ -16,7 +16,7 @@ exports.addVendorApplication = async (req, res) => {
             return res.status(400).json(`vendor already exist`)
         } else {
             const newVendor = await prisma.vendor.create({
-                data: { userId, pan, adhar, shopname, gstNumber, location, email: user.email, mobile: user.mobile, image }
+                data: { userId, pan, adhar, shopname, gstNumber, location, email: user.email, name: user.username, mobile: user.mobile, image }
             })
             res.status(200).json({ message: `Application send successfully`, data: newVendor })
 

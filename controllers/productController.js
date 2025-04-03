@@ -4,8 +4,8 @@ const prisma = require('../connection/db')
 //to add product
 exports.addProduct = async (req, res) => {
     try {
-        const { title, description, price, availability, category } = req.body
-        // Convert availability to an array
+        const { title, description, price, stock, offerPrice, availability, category } = req.body
+
         const parsedAvailability = availability
             ? availability.split(',').map(item => Number(item.trim()))
             : [];
@@ -13,11 +13,13 @@ exports.addProduct = async (req, res) => {
         const image = req.file.filename
         const userId = req.payload
         const parsedPrice = parseFloat(price)
+        const parsedOfferPrice = parseFloat(offerPrice)
 
         const newProduct = await prisma.products.create({
-            data: { title, description, price: parsedPrice, availability: parsedAvailability, category, userId, image }
+            data: { title, description, price: parsedPrice, offerPrice: parsedOfferPrice, availability: parsedAvailability, stock: Number(stock), category, userId, image }
         })
-        res.status(200).json({ message: "Product added", data: newProduct })
+        res.status(201).json({ message: "Product added", data: newProduct })
+
     }
     catch (err) {
         console.log(err);
@@ -31,7 +33,7 @@ exports.getAllProducts = async (req, res) => {
     try {
         // const searchkey = req.query.searchkey
         const { searchkey, category, price } = req.query;
-        
+
         //availability
         let condition = {}
         if (searchkey && searchkey !== "") {
@@ -48,7 +50,7 @@ exports.getAllProducts = async (req, res) => {
         const products = await prisma.products.findMany({
             where: condition
         })
-        
+
         res.status(200).json(products)
     }
     catch (err) {
@@ -116,10 +118,16 @@ exports.getUniqueProduct = async (req, res) => {
         const product = await prisma.products.findUnique({
             where: { id }
         })
+        let totalRating = 0;
+        product.reviews.map((item) => {
+            totalRating += item.rating
+        })
+        const averageRating = totalRating / product.reviews.length
         const vendor = await prisma.vendor.findUnique({
             where: { userId: product.userId }
         })
-        res.status(200).json({ product, shopname: vendor.shopname })
+
+        res.status(200).json({ product, shopname: vendor.shopname, rating: averageRating })
     }
     catch (err) {
         console.log(err);
@@ -183,7 +191,7 @@ exports.addReviewForProduct = async (req, res) => {
         updatedReviews.push(newReview);
         await prisma.products.update({
             where: { id: productId },
-            data: { reviews: updatedReviews }  
+            data: { reviews: updatedReviews }
         });
 
         res.status(201).json({ message: 'Review added successfully', data: updatedReviews });

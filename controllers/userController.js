@@ -57,11 +57,11 @@ const sendOTPSMS = async (mobile, otp) => {
 //user register
 exports.registerUser = async (req, res) => {
     try {
-        const { email, mobile, username,fcmToken } = req.body
-
+        const { email, mobile, username, fcmToken } = req.body
         const exsisting = await prisma.users.findUnique({
             where: { email, mobile }
         })
+
         if (exsisting) {
             const newOtp = generateOTP()
             const newOtpExpiry = new Date(Date.now() + 5 * 60 * 1000) // 5 min
@@ -80,7 +80,7 @@ exports.registerUser = async (req, res) => {
             await sendOTPSMS(mobile, otp)
 
             const newUser = await prisma.users.create({
-                data: { username, mobile, email, otp, otpExpiry,fcmToken }
+                data: { username, mobile, email, otp, otpExpiry, fcmToken }
             })
 
             res.status(200).json(`OTP send successfully`)
@@ -102,7 +102,7 @@ exports.verifyOTP = async (req, res) => {
             where: { email }
         })
         if (!user || user.otp !== otp) {
-          return  res.status(400).json("Invalid OTP")
+            return res.status(400).json("Invalid OTP")
         }
 
         if (Date.now() > user.otpExpiry) {
@@ -163,6 +163,7 @@ exports.loginUser = async (req, res) => {
         const { email, mobile } = req.body
         const user = await prisma.users.findFirst({
             where: {
+                isActive: true,
                 OR: [
                     email ? { email } : {},  // Check if email exists
                     mobile ? { mobile } : {} // Check if mobile exists
