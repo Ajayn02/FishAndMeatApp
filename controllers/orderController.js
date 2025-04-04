@@ -1,4 +1,4 @@
-const prisma = require('../connection/db')
+const prisma = require('../config/db')
 
 exports.getUserOrderHistory = async (req, res) => {
     try {
@@ -6,49 +6,24 @@ exports.getUserOrderHistory = async (req, res) => {
         const orderHistory = await prisma.orders.findMany({
             where: { userId }
         })
-        res.status(200).json(orderHistory)
+        res.json(orderHistory)
     }
     catch (err) {
         console.log(err);
-        res.status(404).json(err)
+        res.status(404).json({ error: err })
     }
 }
 
-exports.getOrderStatus = async (req, res) => {
+exports.getUniqueOrder = async (req, res) => {
     try {
-        const { orderId } = req.params
+        const { id } = req.params
         const order = await prisma.orders.findUnique({
-            where: { id: orderId }
+            where: { id }
         })
-        res.status(200).json(order.status)
+        res.json(order.status)
     }
     catch (err) {
         console.log(err);
-        res.status(404).json(err)
+        res.status(404).json({ error: err })
     }
 }
-
-
-
-// exports.addOrderhistory = async (req, res) => {
-//     try {
-//         const userId = req.payload
-
-//         const { amount, date, status, items, address, pincode } = req.body
-//         const newOrderHistory = await prisma.orders.create({
-//             data: { amount, date, status, userId, items, address, pincode }
-//         })
-//         res.status(200).json(newOrderHistory)
-//     }
-//     catch (err) {
-//         console.log(err);
-//         res.status(404).json(err)
-//     }
-// }
-
-// exports.addPreOrder=async(req,res)=>{
-//     const
-// }
-
-
-

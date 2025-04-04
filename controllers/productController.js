@@ -1,4 +1,4 @@
-const prisma = require('../connection/db')
+const prisma = require('../config/db')
 
 
 //to add product
@@ -20,7 +20,7 @@ exports.addProduct = async (req, res) => {
         })
         res.status(201).json({ message: "Product added", data: newProduct })
         console.log(`product added`);
-        
+
     }
     catch (err) {
         console.log(err);
@@ -33,12 +33,12 @@ exports.addProduct = async (req, res) => {
 exports.getAllProducts = async (req, res) => {
     try {
         // const searchkey = req.query.searchkey
-        const { searchkey, category, price } = req.query;
+        const { search, category, price } = req.query;
 
         //availability
         let condition = {}
-        if (searchkey && searchkey !== "") {
-            condition.title = { contains: searchkey, mode: "insensitive" };
+        if (search && search !== "") {
+            condition.title = { contains: search, mode: "insensitive" };
         }
         if (category && category.trim() !== "") {
             condition.category = { contains: category, mode: "insensitive" };
@@ -68,6 +68,8 @@ exports.getUserPosts = async (req, res) => {
         const products = await prisma.products.findMany({
             where: { userId }
         })
+        console.log(`userpost request`);
+
         res.status(200).json(products)
     }
     catch (err) {
@@ -96,22 +98,6 @@ exports.updateUserProducts = async (req, res) => {
         res.status(404).json(err)
     }
 }
-
-//to get product based on category
-exports.getProductByCategory = async (req, res) => {
-    try {
-        const { category } = req.params
-        const products = await prisma.products.findMany({
-            where: { category }
-        })
-        res.status(200).json(products)
-    }
-    catch (err) {
-        console.log(err);
-        res.status(404).json(err)
-    }
-
-}
 //to get one product
 exports.getUniqueProduct = async (req, res) => {
     try {
@@ -138,7 +124,7 @@ exports.getUniqueProduct = async (req, res) => {
 }
 
 //delet user added product
-exports.deleteUserPost = async (req, res) => {
+exports.deleteProduct = async (req, res) => {
     try {
         const { id } = req.params
         const product = await prisma.products.delete({
@@ -153,36 +139,35 @@ exports.deleteUserPost = async (req, res) => {
 }
 
 //check product availability
+// exports.checkAvailability = async (req, res) => {
+//     try {
+//         const { id } = req.params
+//         const { pincode } = req.body
+//         if (!pincode) { return res.status(400).json(`pincode is required`) }
+//         const product = await prisma.products.findUnique({
+//             where: { id }
+//         })
+//         if (!product) { return res.status(400).json(`product not found`) }
+//         if (product.availability.includes(pincode)) {
+//             res.status(200).json(`product is available at your place`)
+//         } else {
+//             res.status(400).json(`product is not available at your place`)
+//         }
+//     }
+//     catch (err) {
+//         console.log(err);
+//         res.status(404).json(err)
+//     }
+// }
 
-exports.checkAvailability = async (req, res) => {
-    try {
-        const { id } = req.params
-        const { pincode } = req.body
-        if (!pincode) { return res.status(400).json(`pincode is required`) }
-        const product = await prisma.products.findUnique({
-            where: { id }
-        })
-        if (!product) { return res.status(400).json(`product not found`) }
-        if (product.availability.includes(pincode)) {
-            res.status(200).json(`product is available at your place`)
-        } else {
-            res.status(400).json(`product is not available at your place`)
-        }
-    }
-    catch (err) {
-        console.log(err);
-        res.status(404).json(err)
-    }
-}
 
-
-exports.addReviewForProduct = async (req, res) => {
+exports.addProductReview = async (req, res) => {
     try {
         const userId = req.payload
-        const { productId } = req.params
+        const { id } = req.params
         const { review, rating } = req.body
         const product = await prisma.products.findUnique({
-            where: { id: productId }
+            where: { id }
         })
         if (!product) { return res.status(400).json(`product not found`) }
         const newReview = { review, rating, userId };
@@ -191,7 +176,7 @@ exports.addReviewForProduct = async (req, res) => {
 
         updatedReviews.push(newReview);
         await prisma.products.update({
-            where: { id: productId },
+            where: { id },
             data: { reviews: updatedReviews }
         });
 

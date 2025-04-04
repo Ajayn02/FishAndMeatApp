@@ -1,4 +1,4 @@
-const prisma = require('../connection/db')
+const prisma = require('../config/db')
 const Razorpay = require("razorpay")
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY)
 const puppeteer = require('puppeteer')
@@ -106,8 +106,14 @@ exports.conformPayment = async (req, res) => {
 
 }
 
-exports.cancelOrder=async(req,res)=>{
-    
+exports.cancelOrder = async (req, res) => {
+    const { orderId } = req.body
+    const order = await prisma.orders.findUnique({
+        where: {
+            id: orderId
+        }
+    })
+    if (!order) { return res.status(404).json(`order not found`) }
 }
 
 const checkUpcomingPreorders = async () => {
@@ -117,7 +123,7 @@ const checkUpcomingPreorders = async () => {
         tomorrow.setDate(today.getDate() + 1);
         const isoString = tomorrow.toISOString(); // Convert to ISO 8601
         const datePart = isoString.split("T")[0];
-        console.log(datePart);
+        // console.log(datePart);
 
 
         const preOrders = await prisma.orders.findMany({

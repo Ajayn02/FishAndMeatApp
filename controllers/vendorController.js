@@ -1,4 +1,4 @@
-const prisma = require('../connection/db')
+const prisma = require('../config/db')
 
 
 exports.addVendorApplication = async (req, res) => {
@@ -19,7 +19,6 @@ exports.addVendorApplication = async (req, res) => {
                 data: { userId, pan, adhar, shopname, gstNumber, location, email: user.email, name: user.username, mobile: user.mobile, image }
             })
             res.status(200).json({ message: `Application send successfully`, data: newVendor })
-
         }
     } catch (err) {
         console.log(err);

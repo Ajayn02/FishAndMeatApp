@@ -1,4 +1,4 @@
-const prisma = require('../connection/db')
+const prisma = require('../config/db')
 
 const generatePromocode = () => {
     const length = 8

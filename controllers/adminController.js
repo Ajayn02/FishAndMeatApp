@@ -1,4 +1,4 @@
-const prisma = require('../connection/db')
+const prisma = require('../config/db')
 const admin = require('../firebase')
 const cron = require('node-cron')
 
@@ -20,12 +20,7 @@ exports.verifyVendorApplication = async (req, res) => {
         const { id } = req.params
         const { status } = req.body
         if (!status) { return res.status(400).json(`status required`) }
-        // if (status === `reject`) {
-        //     const data = await prisma.vendor.delete({
-        //         where: { id }
-        //     })
-        //     res.status(200).json({ message: "Application rejected", data })
-        // }
+        
         const application = await prisma.vendor.update({
             where: { id },
             data: { status }

@@ -1,10 +1,10 @@
-const prisma = require('../connection/db')
+const prisma = require('../config/db')
 
 
 exports.addToCart = async (req, res) => {
     try {
         const userId = req.payload
-        const { productId, title,offerPrice, description, price, image, reviews, availability, category } = req.body
+        const { productId, title, offerPrice, description, price, image, reviews, availability, category } = req.body
 
         const existing = await prisma.cart.findFirst({
             where: { userId, productId }
@@ -17,7 +17,7 @@ exports.addToCart = async (req, res) => {
             res.status(200).json("Quantity Updated")
         } else {
             const cartProduct = await prisma.cart.create({
-                data: { productId, quantity: 1, title, description, price, image, reviews, availability, category, userId,offerPrice }
+                data: { productId, quantity: 1, title, description, price, image, reviews, availability, category, userId, offerPrice }
             })
             res.status(201).json(cartProduct)
         }

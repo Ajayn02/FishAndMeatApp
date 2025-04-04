@@ -19,7 +19,7 @@ model users {
   email     String @unique
   mobile    String @unique
   address   String?
-  zipcode   String?
+  pincode   String?
   otp       String? 
   otpExpiry DateTime?
   fcmToken  String? 
