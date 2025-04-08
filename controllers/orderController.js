@@ -1,29 +1,20 @@
 const prisma = require('../config/db')
+const AppError = require('../utils/AppError')
+const sendResponse = require('../utils/sendResponse')
+const catchAsync = require('../utils/catchAsync')
 
-exports.getUserOrderHistory = async (req, res) => {
-    try {
-        const userId = req.payload
-        const orderHistory = await prisma.orders.findMany({
-            where: { userId }
-        })
-        res.json(orderHistory)
-    }
-    catch (err) {
-        console.log(err);
-        res.status(404).json({ error: err })
-    }
-}
+exports.getUserOrderHistory = catchAsync(async (req, res, next) => {
+    const userId = req.payload
+    const orderHistory = await prisma.orders.findMany({
+        where: { userId }
+    })
+    sendResponse(res, 200, true, '', orderHistory)
+})
 
-exports.getUniqueOrder = async (req, res) => {
-    try {
-        const { id } = req.params
-        const order = await prisma.orders.findUnique({
-            where: { id }
-        })
-        res.json(order.status)
-    }
-    catch (err) {
-        console.log(err);
-        res.status(404).json({ error: err })
-    }
-}
+exports.getUniqueOrder = catchAsync(async (req, res, next) => {
+    const { id } = req.params
+    const order = await prisma.orders.findUnique({
+        where: { id }
+    })
+    sendResponse(res, 200, true, '', order)
+})

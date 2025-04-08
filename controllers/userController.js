@@ -1,52 +1,26 @@
 const prisma = require('../config/db')
+const AppError = require('../utils/AppError')
+const sendResponse = require('../utils/sendResponse')
+const catchAsync = require('../utils/catchAsync')
 
-//update profile with address
-exports.updateUserProfile = async (req, res) => {
-    try {
-        const { address, pincode, fcmToken } = req.body
-        const userId = req.payload
-        const user = await prisma.users.update({
-            where: { id: userId },
-            data: { address, pincode, fcmToken }
-        })
-        res.status(201).json({ message: "user profile updated", data: user })
+exports.updateUserProfile = catchAsync(async (req, res,next) => {
+    const { address, pincode, fcmToken } = req.body
+    if(!address || pincode || fcmToken){
+       return next(new AppError(`Invalid data`,404))
     }
-    catch (err) {
-        console.log(err);
-        res.status(400).json("OTP sending failed");
-    }
-}
+    const userId = req.payload
+    const user = await prisma.users.update({
+        where: { id: userId },
+        data: { address, pincode, fcmToken }
+    })
+    sendResponse(res,200,true,`user profile updated`,user)
+})
 
-//to get profile information like name address etc..
-exports.getUserDetails = async (req, res) => {
-    try {
-        const userId = req.payload
-        const user = await prisma.users.findUnique({
-            where: { id: userId }
-        })
-        res.json(user)
-    }
-    catch (err) {
-        console.log(err);
-        res.status(404).json(err);
-    }
-
-}
-
-//Save or update FCM token for a user
-// exports.updateFCM_token = async (req, res) => {
-//     try {
-//         const { fcmToken } = req.body
-//         const userId = req.payload
-//         const user = await prisma.users.update({
-//             where: { id: userId },
-//             data: { fcmToken }
-//         })
-//         res.status(200).json(`Fcm token added successfully`)
-//     }
-//     catch (err) {
-//         console.log(err);
-//         res.status(404).json(err);
-//     }
-
-// }
+exports.getUserDetails =catchAsync(async (req,res,next) => {
+    const userId = req.payload
+    const user = await prisma.users.findUnique({
+        where: { id: userId }
+    })
+    if(!user){return next(new AppError('user not found',404))}
+    sendResponse(res,200,true,`user details retrived`,user)
+}) 

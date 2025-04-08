@@ -1,7 +1,7 @@
 const nodemailer = require('nodemailer')
 
 
-const emailService = async (email, subject, data) => {
+const emailService = async (email, subject, data, orderId, pdfPath) => {
     let transporter = nodemailer.createTransport({
         service: "gmail",
         auth: {
@@ -10,14 +10,27 @@ const emailService = async (email, subject, data) => {
         },
     });
 
-    let mailOptions = {
-        from: process.env.EMAIL_ID,
-        to: email,
-        subject,
-        text: data
-        // subject: "Your OTP Code",
-        // text: `Your OTP for registration is ${otp}. It will expire in 5 minutes.`,
-    };
+    if (orderId && pdfPath) {
+        var mailOptions = {
+            from: process.env.EMAIL_ID,
+            to: email,
+            subject,
+            text: data,
+            attachments: [
+                {
+                    filename: `invoice_${orderId}.pdf`,
+                    path: pdfPath,
+                },
+            ]
+        };
+    } else {
+        var mailOptions = {
+            from: process.env.EMAIL_ID,
+            to: email,
+            subject,
+            text: data,
+        }
+    }
 
     await transporter.sendMail(mailOptions, (err, info) => {
         if (err) {

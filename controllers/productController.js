@@ -1,191 +1,115 @@
 const prisma = require('../config/db')
+const catchAsync = require('../utils/catchAsync')
+const AppError = require('../utils/AppError')
+const sendResponse = require('../utils/sendResponse')
 
+exports.addProduct = catchAsync(async (req, res, next) => {
+    const { title, description, price, stock, offerPrice, availability, category } = req.body
 
-//to add product
-exports.addProduct = async (req, res) => {
-    try {
-        const { title, description, price, stock, offerPrice, availability, category } = req.body
+    const parsedAvailability = availability
+        ? availability.split(',').map(item => Number(item.trim()))
+        : [];
 
-        const parsedAvailability = availability
-            ? availability.split(',').map(item => Number(item.trim()))
-            : [];
+    const image = req.file.filename
+    const userId = req.payload
+    const parsedPrice = parseFloat(price)
+    const parsedOfferPrice = parseFloat(offerPrice)
 
-        const image = req.file.filename
-        const userId = req.payload
-        const parsedPrice = parseFloat(price)
-        const parsedOfferPrice = parseFloat(offerPrice)
+    const newProduct = await prisma.products.create({
+        data: { title, description, price: parsedPrice, offerPrice: parsedOfferPrice, availability: parsedAvailability, stock: Number(stock), category, userId, image }
+    })
+    sendResponse(res, 201, true, "Product added", newProduct)
+})
 
-        const newProduct = await prisma.products.create({
-            data: { title, description, price: parsedPrice, offerPrice: parsedOfferPrice, availability: parsedAvailability, stock: Number(stock), category, userId, image }
-        })
-        res.status(201).json({ message: "Product added", data: newProduct })
-        console.log(`product added`);
+exports.getAllProducts = catchAsync(async (req, res, next) => {
 
+    const { search, category, price } = req.query;
+    let condition = {}
+    if (search && search !== "") {
+        condition.title = { contains: search, mode: "insensitive" };
     }
-    catch (err) {
-        console.log(err);
-        res.status(404).json(err)
+    if (category && category.trim() !== "") {
+        condition.category = { contains: category, mode: "insensitive" };
     }
-
-}
-
-//to get all products
-exports.getAllProducts = async (req, res) => {
-    try {
-        // const searchkey = req.query.searchkey
-        const { search, category, price } = req.query;
-
-        //availability
-        let condition = {}
-        if (search && search !== "") {
-            condition.title = { contains: search, mode: "insensitive" };
-        }
-        if (category && category.trim() !== "") {
-            condition.category = { contains: category, mode: "insensitive" };
-        }
-        if (price && price.trim() !== "") {
-            const parsedPrice = parseFloat(price);
-            condition.price = { lte: parsedPrice };
-        }
-
-        const products = await prisma.products.findMany({
-            where: condition
-        })
-
-        res.status(200).json(products)
+    if (price && price.trim() !== "") {
+        const parsedPrice = parseFloat(price);
+        condition.price = { lte: parsedPrice };
     }
-    catch (err) {
-        console.log(err);
-        res.status(404).json(err)
-    }
+    const products = await prisma.products.findMany({
+        where: condition
+    })
+    sendResponse(res, 200, true, '', products)
+})
 
-}
-
-//to get a user added product
-exports.getUserPosts = async (req, res) => {
-    try {
-        const userId = req.payload
-        const products = await prisma.products.findMany({
-            where: { userId }
-        })
-        console.log(`userpost request`);
-
-        res.status(200).json(products)
+exports.getUserPosts = catchAsync(async (req, res, next) => {
+    const userId = req.payload
+    const products = await prisma.products.findMany({
+        where: { userId }
+    })
+    if (!products) {
+        next(new AppError(`product not found `, 404))
     }
-    catch (err) {
-        console.log(err);
-        res.status(404).json(err)
-    }
-}
+    sendResponse(res, 200, true, '', products)
+})
 
-//to update user products
+exports.updateUserProducts = catchAsync(async (req, res, next) => {
+    const { id } = req.params
+    let { title, description, price, availability, category, image } = req.body;
+    if (req.file) {
+        image = req.file.filename;
+    }
+    const updatedProduct = await prisma.products.update({
+        where: { id },
+        data: { title, description, price, availability, category, image }
+    })
+    sendResponse(res, 200, true, 'product updated successfully', updatedProduct)
+})
 
-exports.updateUserProducts = async (req, res) => {
-    try {
-        const { id } = req.params
-        let { title, description, price, availability, category, image } = req.body;
-        if (req.file) {
-            image = req.file.filename;
-        }
-        const updatedProduct = await prisma.products.update({
-            where: { id },
-            data: { title, description, price, availability, category, image }
-        })
-        res.status(200).json(updatedProduct)
-    }
-    catch (err) {
-        console.log(err);
-        res.status(404).json(err)
-    }
-}
-//to get one product
-exports.getUniqueProduct = async (req, res) => {
-    try {
-        const { id } = req.params
-        const product = await prisma.products.findUnique({
-            where: { id }
-        })
-        let totalRating = 0;
+exports.getUniqueProduct = catchAsync(async (req, res, next) => {
+    const { id } = req.params
+    
+    const product = await prisma.products.findUnique({
+        where: { id }
+    })
+    let totalRating = 0;
+    var averageRating=0;
+    if(product.reviews && product.reviews.length>0){
         product.reviews.map((item) => {
             totalRating += item.rating
         })
-        const averageRating = totalRating / product.reviews.length
-        const vendor = await prisma.vendor.findUnique({
-            where: { userId: product.userId }
-        })
-
-        res.status(200).json({ product, shopname: vendor.shopname, rating: averageRating })
+        averageRating = totalRating / product.reviews.length
     }
-    catch (err) {
-        console.log(err);
-        res.status(404).json(err)
-    }
+   
+    const vendor = await prisma.vendor.findUnique({
+        where: { userId: product.userId }
+    })
+    sendResponse(res, 200, true, '', { product, shopname: vendor.shopname, rating: averageRating })
+})
 
-}
+exports.deleteProduct = catchAsync(async (req, res, next) => {
+    const { id } = req.params
+    const product = await prisma.products.delete({
+        where: { id }
+    })
+    sendResponse(res, 200, true, 'product deleted', product)
+})
 
-//delet user added product
-exports.deleteProduct = async (req, res) => {
-    try {
-        const { id } = req.params
-        const product = await prisma.products.delete({
-            where: { id }
-        })
-        res.status(200).json(product)
-    }
-    catch (err) {
-        console.log(err);
-        res.status(404).json(err)
-    }
-}
+exports.addProductReview =catchAsync( async (req, res,next) => {
+    const userId = req.payload
+    const { id } = req.params
+    const { review, rating } = req.body
+    const product = await prisma.products.findUnique({
+        where: { id }
+    })
+    if (!product) { return next(new AppError(`product not found`,404)) }
+    const newReview = { review, rating, userId };
+    // Check if the product already has reviews
+    let updatedReviews = Array.isArray(product.reviews) ? product.reviews : [];
 
-//check product availability
-// exports.checkAvailability = async (req, res) => {
-//     try {
-//         const { id } = req.params
-//         const { pincode } = req.body
-//         if (!pincode) { return res.status(400).json(`pincode is required`) }
-//         const product = await prisma.products.findUnique({
-//             where: { id }
-//         })
-//         if (!product) { return res.status(400).json(`product not found`) }
-//         if (product.availability.includes(pincode)) {
-//             res.status(200).json(`product is available at your place`)
-//         } else {
-//             res.status(400).json(`product is not available at your place`)
-//         }
-//     }
-//     catch (err) {
-//         console.log(err);
-//         res.status(404).json(err)
-//     }
-// }
-
-
-exports.addProductReview = async (req, res) => {
-    try {
-        const userId = req.payload
-        const { id } = req.params
-        const { review, rating } = req.body
-        const product = await prisma.products.findUnique({
-            where: { id }
-        })
-        if (!product) { return res.status(400).json(`product not found`) }
-        const newReview = { review, rating, userId };
-        // Check if the product already has reviews
-        let updatedReviews = Array.isArray(product.reviews) ? product.reviews : [];
-
-        updatedReviews.push(newReview);
-        await prisma.products.update({
-            where: { id },
-            data: { reviews: updatedReviews }
-        });
-
-        res.status(201).json({ message: 'Review added successfully', data: updatedReviews });
-
-    }
-    catch (err) {
-        console.log(err);
-        res.status(404).json(err)
-    }
-
-}
+    updatedReviews.push(newReview);
+    await prisma.products.update({
+        where: { id },
+        data: { reviews: updatedReviews }
+    });
+    sendResponse(res,201,true, 'Review added successfully',)
+})

@@ -1,394 +1,312 @@
 const prisma = require('../config/db')
-const admin = require('../firebase')
-const cron = require('node-cron')
+const AppError = require('../utils/AppError')
+const catchAsync = require('../utils/catchAsync')
+const sendResponse = require('../utils/sendResponse')
 
-exports.getVendorApplications = async (req, res) => {
-    try {
-        const data = await prisma.vendor.findMany({
-            where: { status: "pending" }
+// users
+exports.getUsersList = catchAsync(async (req, res, next) => {
+    const { search } = req.query;
+    const users = await prisma.users.findMany({
+        where: {
+            vendor: false,
+            ...(search && {
+                OR: [
+                    { username: { contains: search, mode: "insensitive" } },
+                    { email: { contains: search, mode: "insensitive" } }
+                ]
+            })
+        }
+    })
+    sendResponse(res, 200, true, ``, users)
+})
+
+
+exports.getOneUser = catchAsync(async (req, res, next) => {
+    const { role, id } = req.body
+
+    if (role == 'user') {
+        const user = await prisma.users.findUnique({
+            where: { id }
         })
-        res.status(200).json(data)
+        return sendResponse(res, 200, true, ``, user)
+    } else if (role == 'vendor') {
+        const vendor = await prisma.vendor.findUnique({
+            where: { id }
+        })
+        return sendResponse(res, 200, true, ``, vendor)
+    } else {
+        return next(new AppError(`not found`, 404))
     }
-    catch (err) {
-        console.log(err);
-        res.status(400).json(err)
-    }
-}
+})
 
-exports.verifyVendorApplication = async (req, res) => {
-    try {
-        const { id } = req.params
-        const { status } = req.body
-        if (!status) { return res.status(400).json(`status required`) }
-        
-        const application = await prisma.vendor.update({
+exports.activateAccount = catchAsync(async (req, res, next) => {
+    const { id } = req.params
+    const { role } = req.body
+    if (role == 'user') {
+        const user = await prisma.users.update({
             where: { id },
-            data: { status }
+            data: { isActive: true }
         })
-        res.status(200).json(`Application status updated`)
-    }
-    catch (err) {
-        console.log(err);
-        res.status(400).json(err)
-    }
-}
-
-exports.getOfferNotificationRequest = async (req, res) => {
-    try {
-        const notifications = await prisma.offerNotifications.findMany({
-            where: { status: "pending" }
-        })
-        res.status(200).json(notifications)
-    }
-    catch (err) {
-        console.log(err);
-        res.status(400).json(err)
-    }
-}
-
-exports.verifyVendorNotificationRequest = async (req, res) => {
-    try {
-        const { id } = req.params
-        const { status } = req.body
-        const notification = await prisma.offerNotifications.update({
+        return sendResponse(res, 200, true, ``, user)
+    } else if (role == 'vendor') {
+        const vendor = await prisma.vendor.update({
             where: { id },
-            data: { status }
+            data: { isActive: true }
         })
-        res.status(200).json(notification)
+        return sendResponse(res, 200, true, ``, vendor)
     }
-    catch (err) {
-        console.log(err);
-        res.status(400).json(err)
+    else {
+        return next(new AppError(`not found`, 404))
     }
 
 }
+)
 
-const sendScheduledNotifications = async () => {
-    try {
-        const now = new Date();
-        const day = String(now.getDate()).padStart(2, "0");
-        const month = String(now.getMonth() + 1).padStart(2, "0"); // Months are 0-based
-        const year = now.getFullYear();
-        const hours = String(now.getHours()).padStart(2, "0");
-        const minutes = String(now.getMinutes()).padStart(2, "0");
 
-        const current = `${day}-${month}-${year}:${hours}.${minutes}`;
-        const notifications = await prisma.offerNotifications.findMany({
-            where: { status: "success", dateTime: current }
+exports.deactivateAccount = catchAsync(async (req, res, next) => {
+    const { id } = req.params
+    const { role } = req.body
+    if (role == 'user') {
+        const user = await prisma.users.update({
+            where: { id },
+            data: { isActive: false }
         })
-        if (notifications.length === 0) {
-            console.log('No scheduled notifications at this time.');
-            return;
+        return sendResponse(res, 200, true, ``, user)
+    } else if (role == 'vendor') {
+        const vendor = await prisma.vendor.update({
+            where: { id },
+            data: { isActive: false }
+        })
+        return sendResponse(res, 200, true, ``, vendor)
+    }
+    else {
+        return next(new AppError(`not found`, 404))
+    }
+})
+
+//vendor
+
+exports.getVendorApplications = catchAsync(async (req, res, next) => {
+    const data = await prisma.vendor.findMany({
+        where: { status: "pending" }
+    })
+    sendResponse(res, 200, true, ``, data)
+})
+
+
+exports.getUniqeVendorApplication = catchAsync(async (req, res, next) => {
+    const { id } = req.params
+    const application = await prisma.vendor.findUnique({
+        where: { id }
+    })
+    sendResponse(res, 200, true, ``, application)
+})
+
+exports.verifyVendorApplication = catchAsync(async (req, res, next) => {
+    const { id } = req.params
+    const { status } = req.body
+    if (!status) { return next(new AppError(`status required`, 400)) }
+
+    const application = await prisma.vendor.update({
+        where: { id },
+        data: { status }
+    })
+    sendResponse(res, 200, true, `Application status updated`)
+})
+
+exports.getVendorList = catchAsync(async (req, res, next) => {
+    const { search } = req.query;
+    const vendors = await prisma.vendor.findMany({
+        where: {
+            status: "success",
+            ...(search && {
+                OR: [
+                    { name: { contains: search, mode: "insensitive" } },
+                    { email: { contains: search, mode: "insensitive" } }
+                ]
+            })
         }
-        for (let i = 0; i < notifications.length; i++) {
-            const users = await prisma.users.findMany({
-                select: { fcmToken: true },
-                where: { fcmToken: { not: null } }
-            });
+    })
+    sendResponse(res, 200, true, ``, vendors)
+})
 
-            if (users.length === 0) {
-                console.log(`no users found`);
-                return;
-            }
-            var message;
-            for (let j = 0; j < users.length; j++) {
-                message = {
-                    token: users[j].fcmToken,
-                    notification: {
-                        title: notifications[i].title,
-                        body: notifications[i].body
-                    },
-                    data: {
-                        productId: notifications[i].productId
-                    }
-                };
-                await admin.messaging().send(message)
-                console.log(`message sended to users`);
-                message = {}
-            }
+exports.getOneVendor = catchAsync(async (req, res, next) => {
+    const { id } = req.params
+    const vendor = await prisma.vendor.findUnique({
+        where: { id }
+    })
+    sendResponse(res, 200, true, ``, vendor)
+})
+
+//Analytics
+
+exports.getSalesReport = catchAsync(async (req, res, next) => {
+    const orders = await prisma.orders.findMany({
+        select: { discountAmount: true }
+    })
+    const totalRevenue = orders.reduce((prev, next) => prev + next.discountAmount, 0)
+    const totalOrders = orders.length
+    sendResponse(res, 200, true, ``, { totalRevenue, totalOrders })
+})
+
+exports.topSellingProduct = catchAsync(async (req, res, next) => {
+    const { period } = req.body;
+
+    const startDate = new Date();
+    if (period === "week") {
+        startDate.setDate(startDate.getDate() - 7); // Last 7 days
+    } else if (period === "month") {
+        startDate.setMonth(startDate.getMonth() - 1); // Last 30 days
+    } else {
+        return next(new AppError(`Invalid period. Use week or month`, 404))
+    }
+
+    // const allOrders = await prisma.orders.findMany()
+    const allOrders = await prisma.orders.findMany({
+        where: {
+            date: {
+                gte: startDate
+            },
         }
+    })
+    //extract items from orders
+    var products = []
+    const addProduct = allOrders.map((i) => {
+        products.push(i.items)
+    })
 
-    } catch (err) {
-        console.log(err);
+    //extract product id and quanity
+    const productDetails = []
+
+    for (let i = 0; i < products.length; i++) {
+        for (let j = 0; j < products[i].length; j++) {
+            productDetails.push({ productId: products[i][j].productId, quantity: products[i][j].quantity })
+        }
     }
-}
+    // grouping same products
+    const salesSummary = productDetails.reduce((acc, { productId, quantity }) => {
+        acc[productId] = (acc[productId] || 0) + quantity;
+        return acc;
+    }, {});
+    //filter top sold product
+    const topProduct = Object.entries(salesSummary).reduce((top, [productId, quantity]) => {
+        return quantity > top.quantity ? { productId, quantity } : top;
+    }, { productId: null, quantity: 0 });
+    // to find the product
+    const topProductDetails = await prisma.products.findUnique({
+        where: { id: topProduct.productId }
+    })
+    sendResponse(res, 200, true, ``, { quantity: topProduct.quantity, productDetails: topProductDetails })
+})
 
-// cron.schedule("* * * * *", async () => {
-//     console.log("checking for new notifications");
-//     await sendScheduledNotifications();
-// })
+exports.topRevenueGeneratingVendor = catchAsync(async (req, res, next) => {
+    const { period } = req.body;
 
-exports.getSalesReport = async (req, res) => {
-    try {
-        const orders = await prisma.orders.findMany({
-            select: { discountAmount: true }
-        })
-        const totalRevenue = orders.reduce((prev, next) => prev + next.discountAmount, 0)
-        const totalOrders = orders.length
-        res.status(200).json({ totalRevenue, totalOrders })
-    } catch (err) {
-        console.log(err);
-        res.status(400).json(err)
+    const startDate = new Date();
+    if (period === "week") {
+        startDate.setDate(startDate.getDate() - 7); // Last 7 days
+    } else if (period === "month") {
+        startDate.setMonth(startDate.getMonth() - 1); // Last 30 days
+    } else {
+        return next(new AppError(`Invalid period. Use week or month`, 404))
     }
-}
 
-exports.getUsersList = async (req, res) => {
-    try {
-        const { search } = req.query;
-        const users = await prisma.users.findMany({
+    // const allOrders = await prisma.orders.findMany()
+    const allOrders = await prisma.orders.findMany({
+        where: {
+            date: {
+                gte: startDate
+            },
+        }
+    })
+    //ordered product details
+    var orderedProducts = [];
+    allOrders.map((i) => {
+        orderedProducts.push(i.items)
+    })
+
+    //filter to productId and quantity
+    var orderDetails = []
+    for (let i = 0; i < orderedProducts.length; i++) {
+        for (let j = 0; j < orderedProducts[i].length; j++) {
+            orderDetails.push({ productId: orderedProducts[i][j].productId, quantity: orderedProducts[i][j].quantity })
+        }
+    }
+    //group same products
+    var groupedProducts = {};
+    orderDetails.forEach(({ productId, quantity }) => {
+        if (!groupedProducts[productId]) {
+            groupedProducts[productId] = 0;
+        }
+        groupedProducts[productId] += quantity;
+    });
+    const finalGroupedProducts = Object.entries(groupedProducts).map(([productId, quantity]) => ({
+        productId,
+        quantity
+    }));
+
+    //for finding products details and revenue
+    var userRevenueDetails = []
+    await Promise.all(finalGroupedProducts.map(async (i) => {
+        var product = await prisma.products.findUnique({
             where: {
-                vendor: false,
-                ...(search && {
-                    OR: [
-                        { username: { contains: search, mode: "insensitive" } },
-                        { email: { contains: search, mode: "insensitive" } }
-                    ]
-                })
+                id: i.productId
             }
         })
+        userRevenueDetails.push({ vendorId: product.userId, productId: i.productId, quantity: i.quantity, price: product.price, totalPrice: product.price * i.quantity })
+    }))
 
-        res.status(200).json(users)
-    }
-    catch (err) {
-        console.log(err);
-        res.status(400).json(err)
-    }
+    //filtering most revenue generated vendor
+    const topVendorDetails = userRevenueDetails.reduce((max, product) => (product.totalPrice > max.totalPrice ? product : max), userRevenueDetails[0]);
+
+    //finding top vendor details
+    const topRevenueGeneratingVendor = await prisma.vendor.findUnique({
+        where: {
+            userId: topVendorDetails.vendorId
+        }
+    })
+    sendResponse(res, 200, true, ``, { vendor: topRevenueGeneratingVendor, profit: topVendorDetails.totalPrice, quantity: topVendorDetails.quantity })
+})
+
+
+//notification
+
+exports.getOfferNotificationRequest =catchAsync(async (req, res,next) => {
+    const notifications = await prisma.offerNotifications.findMany({
+        where: { status: "pending" }
+    })
+    sendResponse(res,200,true,``,notifications)
+}) 
+
+exports.getUniqueOfferNotificationRequest =catchAsync( async (req, res,next) => {
+    const { id } = req.params
+    const notifications = await prisma.offerNotifications.findUnique({
+        where: { id }
+    })
+    sendResponse(res,200,true,``,notifications)
+})
+
+exports.verifyVendorNotificationRequest =catchAsync( async (req, res,next) => {
+    const { id } = req.params
+    const { status } = req.body
+    const notification = await prisma.offerNotifications.update({
+        where: { id },
+        data: { status }
+    })
+    sendResponse(res,200,true,``,notification)
 }
-
-exports.getVendorList = async (req, res) => {
-    try {
-        const { search } = req.query;
-        const vendors = await prisma.vendor.findMany({
-            where: {
-                status: "success",
-                ...(search && {
-                    OR: [
-                        { name: { contains: search, mode: "insensitive" } },
-                        { email: { contains: search, mode: "insensitive" } }
-                    ]
-                })
-            }
-        })
-        res.status(200).json(vendors)
-    }
-    catch (err) {
-        console.log(err);
-        res.status(400).json(err)
-    }
-
-}
-
-exports.getOneUser = async (req, res) => {
-    try {
-        const { role, id } = req.body
-
-        if (role == 'user') {
-            const user = await prisma.users.findUnique({
-                where: { id }
-            })
-            return res.status(200).json(user)
-        } else if (role == 'vendor') {
-            const vendor = await prisma.vendor.findUnique({
-                where: { id }
-            })
-            return res.status(200).json(vendor)
-        } else {
-            return res.status(400).json('not found')
-        }
-    }
-    catch (err) {
-        console.log(err);
-        res.status(400).json(err)
-    }
-}
+)
 
 
-exports.deactivateUser = async (req, res) => {
-    try {
-        const { id, role } = req.body
-        if (role == 'user') {
-            const user = await prisma.users.update({
-                where: { id },
-                data: { isActive: false }
-            })
-            return res.status(200).json(user)
-        } else if (role == 'vendor') {
-            const vendor = await prisma.vendor.update({
-                where: { id },
-                data: { isActive: false }
-            })
-            return res.status(200).json(vendor)
-        }
-        else {
-            return res.status(400).json('not found')
-        }
-
-    }
-    catch (err) {
-        console.log(err);
-        res.status(400).json(err)
-    }
-}
-
-exports.activateAccount = async (req, res) => {
-    try {
-        const { id, role } = req.body
-        if (role == 'user') {
-            const user = await prisma.users.update({
-                where: { id },
-                data: { isActive: true }
-            })
-            return res.status(200).json(user)
-        } else if (role == 'vendor') {
-            const vendor = await prisma.vendor.update({
-                where: { id },
-                data: { isActive: true }
-            })
-            return res.status(200).json(vendor)
-        }
-        else {
-            return res.status(400).json('not found')
-        }
-
-    }
-    catch (err) {
-        console.log(err);
-        res.status(400).json(err)
-    }
-}
 
 
-exports.topSellingProduct = async (req, res) => {
-    try {
-        const { period } = req.params;
 
-        const startDate = new Date();
-        if (period === "week") {
-            startDate.setDate(startDate.getDate() - 7); // Last 7 days
-        } else if (period === "month") {
-            startDate.setMonth(startDate.getMonth() - 1); // Last 30 days
-        } else {
-            return res.status(400).json({ message: "Invalid period. Use week or month" });
-        }
 
-        // const allOrders = await prisma.orders.findMany()
-        const allOrders = await prisma.orders.findMany({
-            where: {
-                date: {
-                    gte: startDate
-                },
-            }
-        })
-        //extract items from orders
-        var products = []
-        const addProduct = allOrders.map((i) => {
-            products.push(i.items)
-        })
 
-        //extract product id and quanity
-        const productDetails = []
-        // products.map((val) => {
-        //     productDetails.push({productId:val[0].productId,quantity:val[0].quantity})
-        // }
-        for (let i = 0; i < products.length; i++) {
-            for (let j = 0; j < products[i].length; j++) {
-                productDetails.push({ productId: products[i][j].productId, quantity: products[i][j].quantity })
-            }
-        }
-        // grouping same products
-        const salesSummary = productDetails.reduce((acc, { productId, quantity }) => {
-            acc[productId] = (acc[productId] || 0) + quantity;
-            return acc;
-        }, {});
-        //filter top sold product
-        const topProduct = Object.entries(salesSummary).reduce((top, [productId, quantity]) => {
-            return quantity > top.quantity ? { productId, quantity } : top;
-        }, { productId: null, quantity: 0 });
-        // to find the product
-        const topProductDetails = await prisma.products.findUnique({
-            where: { id: topProduct.productId }
-        })
-        res.status(200).json({ quantity: topProduct.quantity, productDetails: topProductDetails })
-    }
-    catch (err) {
-        console.log(err);
-        res.status(400).json(err)
-    }
-}
 
-exports.topRevenueGeneratingVendor = async (req, res) => {
-    try {
-        const { period } = req.params;
 
-        const startDate = new Date();
-        if (period === "week") {
-            startDate.setDate(startDate.getDate() - 7); // Last 7 days
-        } else if (period === "month") {
-            startDate.setMonth(startDate.getMonth() - 1); // Last 30 days
-        } else {
-            return res.status(400).json({ message: "Invalid period. Use week or month" });
-        }
 
-        // const allOrders = await prisma.orders.findMany()
-        const allOrders = await prisma.orders.findMany({
-            where: {
-                date: {
-                    gte: startDate
-                },
-            }
-        })
-        //ordered product details
-        var orderedProducts = [];
-        allOrders.map((i) => {
-            orderedProducts.push(i.items)
-        })
 
-        //filter to productId and quantity
-        var orderDetails = []
-        for (let i = 0; i < orderedProducts.length; i++) {
-            for (let j = 0; j < orderedProducts[i].length; j++) {
-                orderDetails.push({ productId: orderedProducts[i][j].productId, quantity: orderedProducts[i][j].quantity })
-            }
-        }
-        //group same products
-        var groupedProducts = {};
-        orderDetails.forEach(({ productId, quantity }) => {
-            if (!groupedProducts[productId]) {
-                groupedProducts[productId] = 0;
-            }
-            groupedProducts[productId] += quantity;
-        });
-        const finalGroupedProducts = Object.entries(groupedProducts).map(([productId, quantity]) => ({
-            productId,
-            quantity
-        }));
 
-        //for finding products details and revenue
-        var userRevenueDetails = []
-        await Promise.all(finalGroupedProducts.map(async (i) => {
-            var product = await prisma.products.findUnique({
-                where: {
-                    id: i.productId
-                }
-            })
-            userRevenueDetails.push({ vendorId: product.userId, productId: i.productId, quantity: i.quantity, price: product.price, totalPrice: product.price * i.quantity })
-        }))
 
-        //filtering most revenue generated vendor
-        const topVendorDetails = userRevenueDetails.reduce((max, product) => (product.totalPrice > max.totalPrice ? product : max), userRevenueDetails[0]);
 
-        //finding top vendor details
-        const topRevenueGeneratingVendor = await prisma.vendor.findUnique({
-            where: {
-                userId: topVendorDetails.vendorId
-            }
-        })
-        res.status(200).json({ vendor: topRevenueGeneratingVendor, profit: topVendorDetails.totalPrice, quantity: topVendorDetails.quantity })
-
-    }
-    catch (err) {
-        console.log(err);
-        res.status(400).json(err)
-    }
-
-}
