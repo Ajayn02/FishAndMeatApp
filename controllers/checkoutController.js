@@ -7,7 +7,8 @@ const sendInvoiceEmail = require('../utils/emailService')
 const sendResponse = require('../utils/sendResponse')
 const AppError = require('../utils/AppError')
 const catchAsync = require('../utils/catchAsync')
-
+const moment = require('moment')
+const notificationService = require('../utils/notificationService')
 
 
 exports.checkoutCart = catchAsync(async (req, res, next) => {
@@ -16,18 +17,15 @@ exports.checkoutCart = catchAsync(async (req, res, next) => {
 
     const cartItems = await prisma.cart.findMany({ where: { userId } });
     if (cartItems.length === 0) {
-       return next(new AppError(`Cart is empty`, 404))
+        return next(new AppError(`Cart is empty`, 404))
     }
     const totalAmount = cartItems.reduce((prev, item) => prev + item.price * item.quantity, 0);
     // Create Razorpay order
     await paymentService(discountAmount);
     if (preOrder) {
 
-        const [day, month, year] = preOrder.split("/").map(Number);
-        // Create a Date object (Month is 0-based in JavaScript)
-        const deliveryDate = new Date(year, month - 1, day);
-        // Convert to ISO format and extract YYYY-MM-DD
-        const actualDate = deliveryDate.toISOString().split("T")[0];
+        const isoString = moment(preOrder, "DD/MM/YYYY").toISOString();
+        const actualDate = isoString.split("T")[0];
 
         var newOrder = await prisma.orders.create({
             data: {
@@ -84,60 +82,7 @@ exports.confirmPayment = catchAsync(async (req, res, next) => {
     sendResponse(res, 200, true, `payment conformed`, updatedOrder)
 })
 
-const checkUpcomingPreorders = async () => {
-    try {
-        const today = new Date();
-        const tomorrow = new Date(today);
-        tomorrow.setDate(today.getDate() + 1);
-        const isoString = tomorrow.toISOString();
-        const datePart = isoString.split("T")[0];
 
-        const preOrders = await prisma.orders.findMany({
-            where: {
-                preOrder: datePart
-            },
-        })
-        console.log(`Found ${preOrders.length} preorders for tomorrow.`);
-
-        if (preOrders.length > 0) {
-
-            for (let i = 0; i < preOrders.length; i++) {
-
-                if (preOrders[i].userId) {
-                    const user = await prisma.users.findUnique({
-                        where: { id: preOrders[i].userId }
-                    })
-
-                    if (user.fcmToken) {
-                        const message = {
-                            notification: {
-                                title: "Reminder: Your preorder is coming!",
-                                body: `Your preorder (#${preOrders[i].id}) will be delivered tomorrow.`,
-                            },
-                            token: user.fcmToken,
-                        };
-                        await admin.messaging().send(message);
-                        console.log(`Notification sent for preorder #${preOrders[i].id}`);
-                    } else {
-                        console.log(`fcmToken not found`);
-                    }
-                } else {
-                    console.log(`user not found`);
-                }
-            }
-        } else {
-            console.log(`No pre-orders for tomorrow`);
-        }
-    } catch (err) {
-        console.log(err);
-    }
-}
-
-// Schedule a cron job to run daily at 11 AM
-cron.schedule("00 11 * * *", async () => {
-    console.log("Running daily preorder check at 11:00 AM...");
-    await checkUpcomingPreorders();
-});
 
 
 

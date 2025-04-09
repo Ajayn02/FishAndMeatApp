@@ -3,12 +3,8 @@ const generatePromocode = require('../utils/generatePromocode')
 const AppError = require('../utils/AppError')
 const catchAsync = require('../utils/catchAsync')
 const sendResponse = require('../utils/sendResponse')
+const moment=require('moment')
 
-
-const convertToISO = (dateStr) => {
-    const [day, month, year] = dateStr.split("/").map(Number);
-    return new Date(year, month - 1, day, 23, 59, 59, 999).toISOString();
-}
 
 
 exports.createPromocode = catchAsync(async (req, res, next) => {
@@ -18,7 +14,7 @@ exports.createPromocode = catchAsync(async (req, res, next) => {
     const vendor = await prisma.vendor.findUnique({
         where: { userId }
     })
-    const expiryDate = convertToISO(expiry)
+    const expiryDate= moment(expiry, 'DD/MM/YYYY').endOf('day').toISOString();
     const code = generatePromocode();
 
     const promocode = await prisma.promocodes.create({
@@ -57,7 +53,7 @@ exports.getVendorPromocode = catchAsync(async (req, res, next) => {
 exports.editVendorPromocode = catchAsync(async (req, res, next) => {
     const { id } = req.params
     const { discount, expiry } = req.body
-    const expiryDate = convertToISO(expiry)
+    const expiryDate = moment(expiry, 'DD/MM/YYYY').endOf('day').toISOString();
     const promocode = await prisma.promocodes.update({
         where: { id },
         data: { discountPercentage: discount, expiry: expiryDate }

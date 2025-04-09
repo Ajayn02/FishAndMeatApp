@@ -3,3 +3,5 @@ node_modules
 .env
 fishandmeat-ea2c8-firebase-adminsdk-fbsvc-1c4828d160.json
 README.md
+logs/
+*.log

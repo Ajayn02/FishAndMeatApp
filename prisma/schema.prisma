@@ -23,7 +23,7 @@ model users {
   otp       String? 
   otpExpiry DateTime?
   fcmToken  String? 
-  vendor    Boolean  @default(false)
+  vendor    String  @default("false")
   isActive  Boolean  @default(true)
 }
 

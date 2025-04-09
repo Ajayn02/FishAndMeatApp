@@ -5,7 +5,7 @@ const catchAsync = require('../utils/catchAsync')
 
 exports.updateUserProfile = catchAsync(async (req, res,next) => {
     const { address, pincode, fcmToken } = req.body
-    if(!address || pincode || fcmToken){
+    if(!address && !pincode && !fcmToken){
        return next(new AppError(`Invalid data`,404))
     }
     const userId = req.payload

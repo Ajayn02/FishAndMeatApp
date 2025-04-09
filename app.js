@@ -3,6 +3,8 @@ const express = require('express')
 const cors = require('cors')
 const errorHandler = require('./middlewares/errorHandler')
 const AppError = require('./utils/AppError')
+const initCrons=require('./utils/cron/cron')
+const morganLogger=require('./middlewares/morganLogger')
 
 const productRoutes = require('./routes/productRoutes')
 const authRoutes = require('./routes/authRoutes')
@@ -13,12 +15,14 @@ const promocodeRoutes = require('./routes/promocodeRoutes')
 const vendorRouter = require('./routes/vendorRoutes')
 const adminRouter = require('./routes/adminRoutes')
 const checkoutRouter = require('./routes/checkoutRoutes')
+
 const app = express()
 
 app.use(cors())
 app.use(express.json())
 app.use('/uploads', express.static('./uploads'))
 
+app.use(morganLogger)
 
 app.use('/api/products', productRoutes)
 app.use('/api/auth', authRoutes)
@@ -35,6 +39,8 @@ app.all('*', (req, res, next) => {
     return next(new AppError(`Can't find ${req.originalUrl}`, 404))
 })
 app.use(errorHandler)
+
+initCrons();
 
 app.get("/", (req, res) => {
     res.send("<h1>server is live</h1>")

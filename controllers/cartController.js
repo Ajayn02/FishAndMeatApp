@@ -55,6 +55,7 @@ exports.decreaseQuantity = catchAsync(async (req, res) => {
     const quantityCount = await prisma.cart.findUnique({
         where: { id }
     })
+    
     if (quantityCount.quantity == 1) {
         await prisma.cart.delete({
             where: { id }

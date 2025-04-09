@@ -8,7 +8,7 @@ exports.getUsersList = catchAsync(async (req, res, next) => {
     const { search } = req.query;
     const users = await prisma.users.findMany({
         where: {
-            vendor: false,
+            vendor: "false",
             ...(search && {
                 OR: [
                     { username: { contains: search, mode: "insensitive" } },
@@ -23,7 +23,6 @@ exports.getUsersList = catchAsync(async (req, res, next) => {
 
 exports.getOneUser = catchAsync(async (req, res, next) => {
     const { role, id } = req.body
-
     if (role == 'user') {
         const user = await prisma.users.findUnique({
             where: { id }
@@ -110,6 +109,11 @@ exports.verifyVendorApplication = catchAsync(async (req, res, next) => {
     const application = await prisma.vendor.update({
         where: { id },
         data: { status }
+    })
+    console.log(application);
+    const user=await prisma.users.update({
+        where:{id:application.userId},
+        data:{vendor:"true"}
     })
     sendResponse(res, 200, true, `Application status updated`)
 })

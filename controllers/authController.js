@@ -30,7 +30,7 @@ exports.registerUser = catchAsync(async (req, res, next) => {
         const otp = generateOTP()
         const otpExpiry = new Date(Date.now() + 5 * 60 * 1000) // 5 min
         const subject = `Your OTP Code`
-        const data = `Your OTP for registration is ${newOtp}. It will expire in 5 minutes.`
+        const data = `Your OTP for registration is ${otp}. It will expire in 5 minutes.`
         await emailService(email, subject, data)
         await smsService(mobile, data)
 
