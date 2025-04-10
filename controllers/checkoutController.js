@@ -1,6 +1,4 @@
 const prisma = require('../config/db')
-const cron = require('node-cron')
-const admin = require('../utils/firebase')
 const paymentService = require('../utils/paymentService')
 const generateInvoicePDF = require('../utils/invoiceService')
 const sendInvoiceEmail = require('../utils/emailService')
@@ -8,7 +6,6 @@ const sendResponse = require('../utils/sendResponse')
 const AppError = require('../utils/AppError')
 const catchAsync = require('../utils/catchAsync')
 const moment = require('moment')
-const notificationService = require('../utils/notificationService')
 
 
 exports.checkoutCart = catchAsync(async (req, res, next) => {
@@ -81,42 +78,4 @@ exports.confirmPayment = catchAsync(async (req, res, next) => {
     }
     sendResponse(res, 200, true, `payment conformed`, updatedOrder)
 })
-
-
-
-
-
-
-// const sendInvoiceEmail = async (user, order, pdfPath) => {
-//     const transporter = nodemailer.createTransport({
-//         service: "gmail",
-//         auth: {
-//             user: process.env.EMAIL_ID,
-//             pass: process.env.EMAIL_PASS,
-//         },
-//     });
-
-//     const mailOptions = {
-//         from: process.env.EMAIL_ID,
-//         to: user.email,
-//         subject: `Invoice for Your Order #${order.id}`,
-//         text: `Hello ${user.username}, please find your invoice for Order #${order.id} attached.`,
-//         attachments: [
-//             {
-//                 filename: `invoice_${order.id}.pdf`,
-//                 path: pdfPath,
-//             },
-//         ],
-//     };
-//     try {
-//         await transporter.sendMail(mailOptions);
-//         console.log(`Invoice email sended successfully`);
-//     } catch (error) {
-//         console.error("Error sending email:", error);
-//     }
-// }
-
-
-
-
 

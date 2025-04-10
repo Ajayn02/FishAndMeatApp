@@ -13,11 +13,10 @@ exports.registerUser = catchAsync(async (req, res, next) => {
     const exsisting = await prisma.users.findUnique({
         where: { email, mobile }
     })
-
+    const subject = `Your OTP Code`
     if (exsisting) {
         const newOtp = generateOTP()
         const newOtpExpiry = new Date(Date.now() + 5 * 60 * 1000) // 5 min
-        const subject = `Your OTP Code`
         const data = `Your OTP for registration is ${newOtp}. It will expire in 5 minutes.`
         await emailService(email, subject, data)
         await smsService(mobile, data)
@@ -29,12 +28,10 @@ exports.registerUser = catchAsync(async (req, res, next) => {
     } else {
         const otp = generateOTP()
         const otpExpiry = new Date(Date.now() + 5 * 60 * 1000) // 5 min
-        const subject = `Your OTP Code`
         const data = `Your OTP for registration is ${otp}. It will expire in 5 minutes.`
         await emailService(email, subject, data)
         await smsService(mobile, data)
-
-        const newUser = await prisma.users.create({
+        await prisma.users.create({
             data: { username, mobile, email, otp, otpExpiry, fcmToken }
         })
         sendResponse(res, 201, true, `OTP send successfully`)
@@ -42,10 +39,18 @@ exports.registerUser = catchAsync(async (req, res, next) => {
 })
 
 exports.verifyOTP = catchAsync(async (req, res, next) => {
-    const { email, otp } = req.body
+    const { email,mobile, otp } = req.body
     const user = await prisma.users.findUnique({
         where: { email }
     })
+    // const user = await prisma.users.findFirst({
+    //     where: {
+    //         OR: [
+    //             email ? { email } : {}, 
+    //             mobile ? { mobile } : {} 
+    //         ]
+    //     }
+    // });
 
     if (!user || user.otp !== otp) {
         return next(new AppError(`Invalid OTP`, 404))
@@ -71,8 +76,8 @@ exports.resendOtp = catchAsync(async (req, res, next) => {
     const user = await prisma.users.findFirst({
         where: {
             OR: [
-                email ? { email } : {},  // Check if email exists
-                mobile ? { mobile } : {} // Check if mobile exists
+                email ? { email } : {}, 
+                mobile ? { mobile } : {} 
             ]
         }
     });

@@ -1,11 +1,11 @@
 const cron = require('node-cron')
-const notificationController = require('../../controllers/notificationController')
+const pushNotifications = require('../../services/pushNotifications')
 
 const scheduleOfferNotifications = () => {
     cron.schedule("0 * * * *", async () => {
         // cron.schedule("* * * * *", async () => {
         console.log("Checking for new offer notifications...");
-        await notificationController.sendScheduledNotifications();
+        pushNotifications.sendScheduledNotifications();
     });
 };
 

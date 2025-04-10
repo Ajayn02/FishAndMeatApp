@@ -36,7 +36,7 @@ app.use('/api/checkouts', checkoutRouter)
 
 
 app.all('*', (req, res, next) => {
-    return next(new AppError(`Can't find ${req.originalUrl}`, 404))
+    return next(new AppError(`Can't find ${req.originalUrl}`, 400))
 })
 app.use(errorHandler)
 

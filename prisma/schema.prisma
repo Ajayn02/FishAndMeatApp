@@ -89,8 +89,7 @@ model Vendor {
   name      String
   pan       String
   gstNumber String
-  adhar     String
-  image     String
+  aadhaar   String
   shopname  String
   location  String
   status    String  @default("pending")

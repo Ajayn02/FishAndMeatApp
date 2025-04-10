@@ -1,5 +1,4 @@
 const prisma = require('../config/db')
-const AppError = require('../utils/AppError')
 const sendResponse = require('../utils/sendResponse')
 const catchAsync = require('../utils/catchAsync')
 

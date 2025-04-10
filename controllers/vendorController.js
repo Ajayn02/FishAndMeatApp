@@ -6,26 +6,23 @@ const catchAsync = require('../utils/catchAsync')
 
 exports.addVendorApplication = catchAsync(async (req, res, next) => {
     const userId = req.payload
-    const image = req.file.filename
-    const { pan, adhar, shopname, gstNumber, location } = req.body
-    if(!pan || !adhar || !shopname || !gstNumber || !location || !image){
-        return next(new AppError(`Invalid data`,404))
+    const { pan, aadhaar, shopname, gstNumber, location } = req.body
+    if (!pan || !aadhaar || !shopname || !gstNumber || !location) {
+        return next(new AppError(`Invalid data`, 404))
     }
-    const user = await prisma.users.update({
-        where: { id: userId },
-        data:{vendor:"pending"}
-    })
     const existing = await prisma.vendor.findUnique({
         where: { userId, email: user.email }
     })
     if (existing) {
-       return next(new AppError(`vendor already exsist`, 404))
+        return next(new AppError(`vendor already exsist`, 404))
     } else {
-        
         const newVendor = await prisma.vendor.create({
-            data: { userId, pan, adhar, shopname, gstNumber, location, email: user.email, name: user.username, mobile: user.mobile, image }
+            data: { userId, pan, aadhaar, shopname, gstNumber, location, email: user.email, name: user.username, mobile: user.mobile }
         })
-
+        const user = await prisma.users.update({
+            where: { id: userId },
+            data: { vendor: "pending" }
+        })
         sendResponse(res, 201, true, `Application send successfully`,)
     }
 })
@@ -35,7 +32,7 @@ exports.getVendorApplicationStatus = catchAsync(async (req, res, next) => {
     const application = await prisma.vendor.findUnique({
         where: { userId }
     })
-    if (!application) { next(new AppError(`Application not found`, 404)) }
+    if (!application) { return next(new AppError(`Application not found`, 404)) }
     sendResponse(res, 200, true, `Application details retrived`, application)
 })
 
@@ -45,9 +42,9 @@ exports.addSpecialOfferNotification = async (req, res, next) => {
     const vendor = await prisma.vendor.findUnique({
         where: { userId }
     })
-    if (!vendor) {return next(new AppError(`vendor not found`, 404)) }
-    
-    const newNotification = await prisma.offerNotifications.create({
+    if (!vendor) { return next(new AppError(`vendor not found`, 404)) }
+
+    await prisma.offerNotifications.create({
         data: { title, body, dateTime, productId, vendorId: vendor.id }
     })
     sendResponse(res, 201, true, `data added successfully wait for admins approval`,)
@@ -58,7 +55,7 @@ exports.specialOfferNotificationStatus = catchAsync(async (req, res, next) => {
     const offer = await prisma.offerNotifications.findUnique({
         where: { id }
     })
-    if (!offer) {return next(new AppError(`offer notification not found`, 404)) }
+    if (!offer) { return next(new AppError(`offer notification not found`, 404)) }
     sendResponse(res, 200, true, ``, offer)
 })
 
@@ -70,5 +67,5 @@ exports.getVendorNotificationHistory = catchAsync(async (req, res, next) => {
     const notifications = await prisma.offerNotifications.findMany({
         where: { vendorId: vendor.id }
     })
-    sendResponse(res,200,true,'',notifications)
+    sendResponse(res, 200, true, '', notifications)
 })

@@ -6,7 +6,6 @@ const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TO
 const smsService = async (mobile, data) => {
     try {
         await client.messages.create({
-            // body: `Your OTP for verification is ${otp}. It will expire in 5 minutes.`,
             body: data,
             from: process.env.TWILIO_PHONE_NUMBER,
             to: mobile, // Ensure the number is in E.164 format (+1XXXXXXXXXX)

@@ -1,7 +1,9 @@
-const prisma = require('../config/db')
-const moment = require('moment')
-const notificationService = require('../utils/notificationService')
+const prisma=require('../config/db')
+const moment=require('moment')
+const notificationService=require('../utils/notificationService')
 const catchAsync = require('../utils/catchAsync')
+
+
 
 exports.checkUpcomingPreorders = catchAsync(async () => {
     const tomorrowDate = moment().add(1, 'days').format('DD-MM-YYYY')
@@ -39,8 +41,6 @@ exports.checkUpcomingPreorders = catchAsync(async () => {
         console.log(`No pre-orders for tomorrow`);
     }
 })
-
-
 
 exports.sendScheduledNotifications = catchAsync(async () => {
     // const current = moment().format('DD-MM-YYYY:HH.mm');

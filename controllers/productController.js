@@ -7,17 +7,14 @@ const path = require('path')
 
 exports.addProduct = catchAsync(async (req, res, next) => {
     const { title, description, price, stock, offerPrice, availability, category } = req.body
-
     const parsedAvailability = availability
         ? availability.split(',').map(item => Number(item.trim()))
         : [];
 
-    // const image = req.file.filename
     const userId = req.payload
     const parsedPrice = parseFloat(price)
     const parsedOfferPrice = parseFloat(offerPrice)
 
-    //testing
     if (!req.file || !req.file.buffer) {
         return next(new AppError(`no files`, 400));
     }
@@ -25,14 +22,13 @@ exports.addProduct = catchAsync(async (req, res, next) => {
     const outputPath = path.join(__dirname, '../uploads', filename);
 
     await sharp(req.file.buffer)
-        .resize({ width: 800 }) // or smaller for thumbnails
+        .resize({ width: 800 })
         .jpeg({
             quality: 60,        // 50–70 is ideal for mobile
             chromaSubsampling: '4:4:4', // better text/image clarity (especially for UI screenshots)
             progressive: true   // improves loading experience on slow connections
         })
         .toFile(outputPath);
-    //testing
 
     const newProduct = await prisma.products.create({
         data: { title, description, price: parsedPrice, offerPrice: parsedOfferPrice, availability: parsedAvailability, stock: Number(stock), category, userId, image: filename }
@@ -41,9 +37,8 @@ exports.addProduct = catchAsync(async (req, res, next) => {
 })
 
 exports.getAllProducts = catchAsync(async (req, res, next) => {
-
     const { search, category, price } = req.query;
-    let condition = {}
+    let condition = {};
     if (search && search !== "") {
         condition.title = { contains: search, mode: "insensitive" };
     }
@@ -66,16 +61,27 @@ exports.getUserPosts = catchAsync(async (req, res, next) => {
         where: { userId }
     })
     if (!products) {
-        next(new AppError(`product not found `, 404))
+        return next(new AppError(`product not found `, 404))
     }
     sendResponse(res, 200, true, '', products)
 })
 
 exports.updateUserProducts = catchAsync(async (req, res, next) => {
     const { id } = req.params
-    let { title, description, price, availability, category, image } = req.body;
+    var { title, description, price, availability, category, image } = req.body;
     if (req.file) {
-        image = req.file.filename;
+        // image = req.file.filename;
+        image = `image-${Date.now()}-${req.file.originalname}`
+        const outputPath = path.join(__dirname, '../uploads', image);
+
+        await sharp(req.file.buffer)
+            .resize({ width: 800 })
+            .jpeg({
+                quality: 60,        // 50–70 is ideal for mobile
+                chromaSubsampling: '4:4:4', // better text/image clarity (especially for UI screenshots)
+                progressive: true   // improves loading experience on slow connections
+            })
+            .toFile(outputPath);
     }
     const updatedProduct = await prisma.products.update({
         where: { id },
@@ -86,7 +92,6 @@ exports.updateUserProducts = catchAsync(async (req, res, next) => {
 
 exports.getUniqueProduct = catchAsync(async (req, res, next) => {
     const { id } = req.params
-
     const product = await prisma.products.findUnique({
         where: { id }
     })

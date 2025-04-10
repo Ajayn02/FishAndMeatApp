@@ -110,8 +110,7 @@ exports.verifyVendorApplication = catchAsync(async (req, res, next) => {
         where: { id },
         data: { status }
     })
-    console.log(application);
-    const user=await prisma.users.update({
+    await prisma.users.update({
         where:{id:application.userId},
         data:{vendor:"true"}
     })
@@ -208,14 +207,13 @@ exports.topRevenueGeneratingVendor = catchAsync(async (req, res, next) => {
 
     const startDate = new Date();
     if (period === "week") {
-        startDate.setDate(startDate.getDate() - 7); // Last 7 days
+        startDate.setDate(startDate.getDate() - 7);
     } else if (period === "month") {
-        startDate.setMonth(startDate.getMonth() - 1); // Last 30 days
+        startDate.setMonth(startDate.getMonth() - 1);
     } else {
         return next(new AppError(`Invalid period. Use week or month`, 404))
     }
 
-    // const allOrders = await prisma.orders.findMany()
     const allOrders = await prisma.orders.findMany({
         where: {
             date: {
@@ -274,7 +272,6 @@ exports.topRevenueGeneratingVendor = catchAsync(async (req, res, next) => {
 
 
 //notification
-
 exports.getOfferNotificationRequest =catchAsync(async (req, res,next) => {
     const notifications = await prisma.offerNotifications.findMany({
         where: { status: "pending" }
@@ -292,10 +289,9 @@ exports.getUniqueOfferNotificationRequest =catchAsync( async (req, res,next) => 
 
 exports.verifyVendorNotificationRequest =catchAsync( async (req, res,next) => {
     const { id } = req.params
-    const { status } = req.body
     const notification = await prisma.offerNotifications.update({
         where: { id },
-        data: { status }
+        data: { status:req.body }
     })
     sendResponse(res,200,true,``,notification)
 }

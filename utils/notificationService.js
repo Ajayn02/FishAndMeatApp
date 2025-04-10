@@ -1,6 +1,4 @@
-const prisma = require("../config/db")
 const admin = require('./firebase')
-const cron = require('node-cron')
 
 
 const notificationService = async (title, body, token, data) => {

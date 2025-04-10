@@ -1,5 +1,4 @@
 const prisma = require('../config/db')
-const AppError = require('../utils/AppError')
 const catchAsync = require('../utils/catchAsync')
 const sendResponse = require('../utils/sendResponse')
 
@@ -55,7 +54,7 @@ exports.decreaseQuantity = catchAsync(async (req, res) => {
     const quantityCount = await prisma.cart.findUnique({
         where: { id }
     })
-    
+
     if (quantityCount.quantity == 1) {
         await prisma.cart.delete({
             where: { id }
